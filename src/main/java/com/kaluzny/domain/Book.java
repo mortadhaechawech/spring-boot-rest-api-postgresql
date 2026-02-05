@@ -1,8 +1,6 @@
 package com.kaluzny.domain;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.util.ArrayList;
@@ -16,19 +14,16 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = "id")
-@ToString
+@ToString(exclude = "tags")
 public class Book {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Name is required")
-    @Size(min = 1, max = 255, message = "Name must be between 1 and 255 characters")
     @Column(nullable = false)
     private String name;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
     @Column(length = 1000)
     private String description;
 

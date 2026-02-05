@@ -10,8 +10,18 @@ Content-Type: application/json
   "tags": ["java", "programming", "backend"]
 }
 
-### Get all books
+### Get all books (paginated, default page=0, size=20)
 GET http://localhost:8080/api/books
+Accept: application/json
+Authorization: Basic dXNlcjp1c2Vy
+
+### Get all books (page 0, size 5)
+GET http://localhost:8080/api/books?page=0&size=5
+Accept: application/json
+Authorization: Basic dXNlcjp1c2Vy
+
+### Get all books (page 1, size 5, sorted by name)
+GET http://localhost:8080/api/books?page=1&size=5&sort=name,asc
 Accept: application/json
 Authorization: Basic dXNlcjp1c2Vy
 
@@ -41,11 +51,26 @@ Content-Type: application/json
 DELETE http://localhost:8080/api/books/1
 Authorization: Basic dXNlcjp1c2Vy
 
-### Delete all books
-DELETE http://localhost:8080/api/books
-Authorization: Basic dXNlcjp1c2Vy
-
-### Health check (Actuator)
+### Health check (public - no auth required)
 GET http://localhost:8080/actuator/health
 Accept: application/json
+
+### App info (public - no auth required)
+GET http://localhost:8080/actuator/info
+Accept: application/json
+
+### Metrics (requires auth)
+GET http://localhost:8080/actuator/metrics
+Accept: application/json
 Authorization: Basic dXNlcjp1c2Vy
+
+### Swagger UI (open in browser)
+# http://localhost:8080/swagger-ui.html
+
+### OpenAPI JSON
+GET http://localhost:8080/v3/api-docs
+Accept: application/json
+
+### OpenAPI YAML
+GET http://localhost:8080/v3/api-docs.yaml
+Accept: application/x-yaml

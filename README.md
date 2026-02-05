@@ -2,146 +2,232 @@
 
 ![Build](https://github.com/OKaluzny/spring-boot-rest-api-postgresql/actions/workflows/ci.yml/badge.svg)
 
-REST API CRUD application built with Spring Boot 4 and PostgreSQL.
+Educational project: REST API for managing books built with Spring Boot 4 and PostgreSQL.
 
-## Tech Stack
+## What You Will Learn
 
-- Java 17
-- Spring Boot 4.0.2
-- Spring Data JPA
-- Spring Security (Basic Auth)
-- PostgreSQL
-- Lombok
-- Docker
+- Building REST API with Spring Boot
+- Working with databases using Spring Data JPA
+- Data validation
+- Error handling (RFC 7807 Problem Details)
+- Basic Authentication
+- Swagger/OpenAPI documentation
+- Docker for database
+- Writing tests
 
 ## Requirements
 
-- JDK 17+
-- Maven 3.8+
-- PostgreSQL 14+ (or Docker)
+Before starting, make sure you have installed:
 
-## Quick Start
+- **Java 17+** — check: `java -version`
+- **Maven 3.8+** — check: `mvn -version`
+- **Docker** — check: `docker --version`
 
-### 1. Start PostgreSQL
+## Quick Start (5 minutes)
+
+### Step 1: Clone the repository
+
+```bash
+git clone https://github.com/OKaluzny/spring-boot-rest-api-postgresql.git
+cd spring-boot-rest-api-postgresql
+```
+
+### Step 2: Start PostgreSQL
 
 ```bash
 docker-compose up -d postgres
 ```
 
-### 2. Run Application
+Verify the container is running:
+```bash
+docker ps
+```
+You should see container `book-db` with status `Up`.
+
+### Step 3: Run the application
 
 ```bash
 mvn spring-boot:run
 ```
 
-Application starts at `http://localhost:8080`
+Wait for the message:
+```
+Started Application in X seconds
+```
 
-### 3. Default Credentials
+### Step 4: Open Swagger UI
 
-- **API Auth:** `user:user`
-- **Database:** `postgres:postgres`
+Open in browser: **http://localhost:8080/swagger-ui.html**
 
-## API Endpoints
+Here you can interactively test the API.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/books` | Create book |
-| GET | `/api/books` | Get all books |
-| GET | `/api/books/{id}` | Get book by ID |
-| GET | `/api/books?name={name}` | Search by name |
-| PUT | `/api/books/{id}` | Update book |
-| DELETE | `/api/books/{id}` | Delete book |
-| DELETE | `/api/books` | Delete all books |
+### Step 5: Authorization
 
-### Example Request
+API requires authentication:
+- **Username:** `user`
+- **Password:** `user`
+
+In Swagger UI click the **"Authorize"** button and enter these credentials.
+
+## Your First Request with curl
+
+Create a book:
 
 ```bash
 curl -X POST http://localhost:8080/api/books \
   -H "Content-Type: application/json" \
-  -H "Authorization: Basic dXNlcjp1c2Vy" \
-  -d '{
-    "name": "Java Programming",
-    "description": "Learn Java",
-    "tags": ["java", "programming"]
-  }'
+  -u user:user \
+  -d '{"name": "Java Programming", "description": "Learn Java", "tags": ["java"]}'
 ```
 
-### Example Response
-
+Response:
 ```json
 {
   "id": 1,
   "name": "Java Programming",
   "description": "Learn Java",
-  "tags": ["java", "programming"]
+  "tags": ["java"]
 }
 ```
 
-## Configuration
-
-Environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DB_HOST` | localhost | Database host |
-| `DB_PORT` | 5432 | Database port |
-| `DB_NAME` | book_db | Database name |
-| `DB_USERNAME` | postgres | Database user |
-| `DB_PASSWORD` | postgres | Database password |
-| `SECURITY_USER` | user | API username |
-| `SECURITY_PASSWORD` | user | API password |
-| `SERVER_PORT` | 8080 | Application port |
-
-## Docker
-
-### Run full stack
-
+Get all books:
 ```bash
-docker-compose --profile full up -d
+curl http://localhost:8080/api/books -u user:user
 ```
 
-### Run only PostgreSQL
+## API Endpoints
 
-```bash
-docker-compose up -d postgres
+| Method | URL | Description |
+|--------|-----|-------------|
+| `POST` | `/api/books` | Create a book |
+| `GET` | `/api/books` | Get all books (paginated) |
+| `GET` | `/api/books/{id}` | Get book by ID |
+| `GET` | `/api/books?name=Java` | Search by name |
+| `PUT` | `/api/books/{id}` | Update a book |
+| `DELETE` | `/api/books/{id}` | Delete a book |
+
+### Pagination
+
+```
+GET /api/books?page=0&size=10&sort=name,asc
 ```
 
-### Build image only
-
-```bash
-docker build -t book-api .
-```
-
-## Actuator Endpoints
-
-- Health: `GET /actuator/health`
-- Info: `GET /actuator/info`
-- Metrics: `GET /actuator/metrics`
+- `page` — page number (starting from 0)
+- `size` — number of items per page
+- `sort` — sorting (field,direction)
 
 ## Project Structure
 
 ```
 src/main/java/com/kaluzny/
-├── Application.java              # Entry point
-├── domain/
-│   ├── Book.java                 # JPA Entity
-│   └── BookRepository.java       # Spring Data Repository
-├── exception/
+│
+├── Application.java          # Entry point
+│
+├── config/                   # Configuration
+│   ├── SecurityConfig.java   # Security settings
+│   └── OpenApiConfig.java    # Swagger settings
+│
+├── domain/                   # Data layer
+│   ├── Book.java             # JPA entity
+│   └── BookRepository.java   # Repository
+│
+├── dto/                      # Data Transfer Objects
+│   ├── BookCreateRequest.java
+│   ├── BookUpdateRequest.java
+│   ├── BookResponse.java
+│   └── BookMapper.java
+│
+├── service/                  # Business logic
+│   └── BookService.java
+│
+├── exception/                # Error handling
 │   ├── BookNotFoundException.java
 │   └── GlobalExceptionHandler.java
-└── web/
-    └── BookRestController.java   # REST Controller
+│
+└── web/                      # REST controllers
+    └── BookRestController.java
 ```
 
-## Testing
+## Architecture
+
+```
+HTTP Request
+     ↓
+┌─────────────────┐
+│   Controller    │  ← Receives DTO, validation
+└────────┬────────┘
+         ↓
+┌─────────────────┐
+│    Service      │  ← Business logic
+└────────┬────────┘
+         ↓
+┌─────────────────┐
+│   Repository    │  ← Database operations
+└────────┬────────┘
+         ↓
+┌─────────────────┐
+│   PostgreSQL    │
+└─────────────────┘
+```
+
+## Stopping the Application
+
+1. Stop Spring Boot: `Ctrl+C` in terminal
+2. Stop PostgreSQL:
+```bash
+docker-compose down
+```
+
+## Running Tests
 
 ```bash
-# Run tests (requires PostgreSQL)
 mvn test
-
-# Skip tests
-mvn package -DskipTests
 ```
+
+Tests use H2 in-memory database, PostgreSQL is not required.
+
+## Useful Links
+
+| URL | Description |
+|-----|-------------|
+| http://localhost:8080/swagger-ui.html | Swagger UI |
+| http://localhost:8080/v3/api-docs | OpenAPI JSON |
+| http://localhost:8080/actuator/health | Health check |
+
+## Troubleshooting
+
+### Error: "Port 8080 already in use"
+
+Find and stop the process:
+```bash
+lsof -i :8080
+kill -9 <PID>
+```
+
+### Error: "Connection refused" to PostgreSQL
+
+Check that container is running:
+```bash
+docker ps
+docker-compose up -d postgres
+```
+
+### Error: "docker: command not found"
+
+Install Docker Desktop: https://www.docker.com/products/docker-desktop
+
+## Technologies
+
+| Technology | Version | Description |
+|------------|---------|-------------|
+| Java | 17 | Programming language |
+| Spring Boot | 4.0.2 | Framework |
+| Spring Data JPA | - | ORM for database |
+| Spring Security | - | Security |
+| PostgreSQL | 16 | Database |
+| Swagger/OpenAPI | 3.1 | API documentation |
+| Lombok | 1.18 | Reduce boilerplate |
+| JUnit 5 | - | Testing |
 
 ## License
 

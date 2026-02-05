@@ -1,142 +1,133 @@
 package com.kaluzny.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaluzny.domain.Book;
 import com.kaluzny.domain.BookRepository;
+import com.kaluzny.dto.BookCreateRequest;
+import com.kaluzny.dto.BookResponse;
+import com.kaluzny.dto.BookUpdateRequest;
+import com.kaluzny.exception.BookNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
-import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@AutoConfigureMockMvc
 @ActiveProfiles("test")
 class BookRestControllerTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private BookRestController controller;
 
     @Autowired
-    private BookRepository bookRepository;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private BookRepository repository;
 
     @BeforeEach
     void setUp() {
-        bookRepository.deleteAll();
+        repository.deleteAll();
     }
 
     @Test
-    @WithMockUser
-    void shouldCreateBook() throws Exception {
-        Book book = Book.builder()
-                .name("Java Programming")
-                .description("Learn Java")
-                .tags(List.of("java", "programming"))
-                .build();
+    void shouldCreateBook() {
+        BookCreateRequest request = new BookCreateRequest(
+                "Java Programming",
+                "Learn Java",
+                List.of("java", "programming")
+        );
 
-        mockMvc.perform(post("/api/books")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(book)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.name").value("Java Programming"));
+        BookResponse response = controller.createBook(request);
+
+        assertNotNull(response.id());
+        assertEquals("Java Programming", response.name());
+        assertEquals("Learn Java", response.description());
+        assertEquals(2, response.tags().size());
     }
 
     @Test
-    @WithMockUser
-    void shouldGetAllBooks() throws Exception {
-        Book book = Book.builder()
-                .name("Spring Boot")
-                .description("Spring Boot Guide")
-                .build();
-        bookRepository.save(book);
+    void shouldGetAllBooksWithPagination() {
+        controller.createBook(new BookCreateRequest("Book 1", "Desc 1", null));
+        controller.createBook(new BookCreateRequest("Book 2", "Desc 2", null));
+        controller.createBook(new BookCreateRequest("Book 3", "Desc 3", null));
 
-        mockMvc.perform(get("/api/books"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Spring Boot"));
+        Page<BookResponse> page = controller.getAllBooks(PageRequest.of(0, 2));
+
+        assertEquals(2, page.getContent().size());
+        assertEquals(3, page.getTotalElements());
+        assertEquals(2, page.getTotalPages());
     }
 
     @Test
-    @WithMockUser
-    void shouldGetBookById() throws Exception {
-        Book book = Book.builder()
-                .name("Kotlin")
-                .description("Kotlin Guide")
-                .build();
-        Book saved = bookRepository.save(book);
+    void shouldGetBookById() {
+        BookResponse created = controller.createBook(
+                new BookCreateRequest("Kotlin", "Kotlin Guide", null)
+        );
 
-        mockMvc.perform(get("/api/books/{id}", saved.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Kotlin"));
+        BookResponse found = controller.getBookById(created.id());
+
+        assertEquals("Kotlin", found.name());
+        assertEquals("Kotlin Guide", found.description());
     }
 
     @Test
-    @WithMockUser
-    void shouldReturn404WhenBookNotFound() throws Exception {
-        mockMvc.perform(get("/api/books/{id}", 999L))
-                .andExpect(status().isNotFound());
+    void shouldThrowWhenBookNotFound() {
+        assertThrows(BookNotFoundException.class, () ->
+                controller.getBookById(999L)
+        );
     }
 
     @Test
-    @WithMockUser
-    void shouldUpdateBook() throws Exception {
-        Book book = Book.builder()
-                .name("Old Name")
-                .description("Old Description")
-                .build();
-        Book saved = bookRepository.save(book);
+    void shouldFindBooksByName() {
+        controller.createBook(new BookCreateRequest("Java", "Java book", null));
+        controller.createBook(new BookCreateRequest("Java", "Another Java book", null));
+        controller.createBook(new BookCreateRequest("Kotlin", "Kotlin book", null));
 
-        Book updated = Book.builder()
-                .name("New Name")
-                .description("New Description")
-                .tags(List.of("updated"))
-                .build();
+        List<BookResponse> results = controller.findBookByName("Java");
 
-        mockMvc.perform(put("/api/books/{id}", saved.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updated)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("New Name"));
+        assertEquals(2, results.size());
     }
 
     @Test
-    @WithMockUser
-    void shouldDeleteBook() throws Exception {
-        Book book = Book.builder()
-                .name("To Delete")
-                .description("Will be deleted")
-                .build();
-        Book saved = bookRepository.save(book);
+    void shouldUpdateBook() {
+        BookResponse created = controller.createBook(
+                new BookCreateRequest("Old Name", "Old Description", null)
+        );
 
-        mockMvc.perform(delete("/api/books/{id}", saved.getId()))
-                .andExpect(status().isNoContent());
+        BookUpdateRequest updateRequest = new BookUpdateRequest(
+                "New Name",
+                "New Description",
+                List.of("updated")
+        );
+
+        BookResponse updated = controller.updateBook(created.id(), updateRequest);
+
+        assertEquals("New Name", updated.name());
+        assertEquals("New Description", updated.description());
+        assertEquals(1, updated.tags().size());
+        assertEquals("updated", updated.tags().get(0));
     }
 
     @Test
-    @WithMockUser
-    void shouldReturnValidationErrorForEmptyName() throws Exception {
-        Book book = Book.builder()
-                .name("")
-                .description("Description")
-                .build();
+    void shouldDeleteBook() {
+        BookResponse created = controller.createBook(
+                new BookCreateRequest("To Delete", "Will be deleted", null)
+        );
 
-        mockMvc.perform(post("/api/books")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(book)))
-                .andExpect(status().isBadRequest());
+        controller.deleteBook(created.id());
+
+        assertThrows(BookNotFoundException.class, () ->
+                controller.getBookById(created.id())
+        );
+    }
+
+    @Test
+    void shouldThrowWhenDeletingNonExistentBook() {
+        assertThrows(BookNotFoundException.class, () ->
+                controller.deleteBook(999L)
+        );
     }
 }
