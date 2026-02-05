@@ -1,23 +1,51 @@
-# For a quick start check out our HTTP Requests collection (Tools|HTTP Client|Open HTTP Requests Collection) or
-# paste cURL into the file and request will be converted to HTTP Request format.
-#
-# Following HTTP Request Live Templates are available:
-# * 'gtrp' and 'gtr' create a GET request with or without query parameters;
-# * 'ptr' and 'ptrp' create a POST request with a simple or parameter-like body;
-# * 'mptr' and 'fptr' create a POST request to submit a form with a text or file field (multipart/form-data);
-
-### Send POST request with json body
+### Create a new book
 POST http://localhost:8080/api/books
 Accept: application/json
 Authorization: Basic dXNlcjp1c2Vy
 Content-Type: application/json
 
 {
-  "name": "Java",
-  "description": "Programming",
-  "tags": [
-    "#lambdaexpressions, #streams, #functionalprogramming"
-  ]
+  "name": "Java Programming",
+  "description": "Learn Java from scratch",
+  "tags": ["java", "programming", "backend"]
 }
 
-###
+### Get all books
+GET http://localhost:8080/api/books
+Accept: application/json
+Authorization: Basic dXNlcjp1c2Vy
+
+### Get book by ID
+GET http://localhost:8080/api/books/1
+Accept: application/json
+Authorization: Basic dXNlcjp1c2Vy
+
+### Search books by name
+GET http://localhost:8080/api/books?name=Java
+Accept: application/json
+Authorization: Basic dXNlcjp1c2Vy
+
+### Update book
+PUT http://localhost:8080/api/books/1
+Accept: application/json
+Authorization: Basic dXNlcjp1c2Vy
+Content-Type: application/json
+
+{
+  "name": "Java Programming Updated",
+  "description": "Updated description",
+  "tags": ["java", "updated"]
+}
+
+### Delete book by ID
+DELETE http://localhost:8080/api/books/1
+Authorization: Basic dXNlcjp1c2Vy
+
+### Delete all books
+DELETE http://localhost:8080/api/books
+Authorization: Basic dXNlcjp1c2Vy
+
+### Health check (Actuator)
+GET http://localhost:8080/actuator/health
+Accept: application/json
+Authorization: Basic dXNlcjp1c2Vy
