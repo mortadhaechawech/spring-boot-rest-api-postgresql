@@ -44,3 +44,10 @@ jobs:
           DB_NAME: book_db
           DB_USERNAME: postgres
           DB_PASSWORD: postgres
+      - name: Publish test results
+        if: always()
+        uses: dorny/test-reporter@v2
+        with:
+          name: JUnit Tests
+          path: target/surefire-reports/*.xml
+          reporter: java-junit
